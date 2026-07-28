@@ -13,6 +13,27 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+
+  {
+    files: ["src/modules/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            { name: "react", message: "modules/ es backend puro, sin React." },
+            { name: "next/navigation", message: "modules/ no conoce HTTP." },
+          ],
+          patterns: [
+            {
+              group: ["@/components/*", "@/features/*", "@/app/*"],
+              message: "modules/ no puede depender de la capa de UI.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

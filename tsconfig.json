@@ -20,7 +20,12 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "next-env.d.ts",

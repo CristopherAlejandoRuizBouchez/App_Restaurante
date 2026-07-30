@@ -41,3 +41,36 @@ GET {{baseUrl}}/api/internal/restaurant
 
 ### Listar mesas (requiere sesión)
 GET {{baseUrl}}/api/internal/tables
+
+### ---------- CATÁLOGO ----------
+
+### Listar categorías
+GET {{baseUrl}}/api/internal/categories
+
+### Listar productos
+GET {{baseUrl}}/api/internal/products
+
+
+
+### ---------- API PÚBLICA v1 (Make) ----------
+
+@apiKey = sk_test_3c2820b2dbd2e477f0af528eb829f1c1c033a2c8b312d1e5
+
+### Productos v1
+GET {{baseUrl}}/api/v1/products
+Authorization: Bearer {{apiKey}}
+
+### Categorías v1
+GET {{baseUrl}}/api/v1/categories
+Authorization: Bearer {{apiKey}}
+
+### Menú completo v1
+GET {{baseUrl}}/api/v1/menu
+Authorization: Bearer {{apiKey}}
+
+### Sin API Key (debe dar 401)
+GET {{baseUrl}}/api/v1/products
+
+### API Key inválida (debe dar 401)
+GET {{baseUrl}}/api/v1/products
+Authorization: Bearer sk_test_incorrecta

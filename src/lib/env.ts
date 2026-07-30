@@ -9,6 +9,8 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET requiere 32+ caracteres"),
   WEBHOOK_SIGNING_SECRET: z.string().min(32),
   NEXT_PUBLIC_APP_URL: z.string().url(),
+  PUBLIC_API_KEY: z.string().min(20),
+  PUBLIC_API_RESTAURANT_ID: z.string().min(1),
 });
 
 function parseEnv() {

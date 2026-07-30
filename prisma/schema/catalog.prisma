@@ -1,0 +1,46 @@
+model Category {
+  id           String @id @default(cuid())
+  restaurantId String @map("restaurant_id")
+
+  name        String
+  description String?
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  products   Product[]
+
+  @@unique([restaurantId, name])
+  @@index([restaurantId, isActive, sortOrder])
+  @@map("categories")
+}
+
+model Product {
+  id           String @id @default(cuid())
+  restaurantId String @map("restaurant_id")
+  categoryId   String @map("category_id")
+
+  name        String
+  description String?
+  priceCents  Int     @map("price_cents")
+  imageUrl    String? @map("image_url")
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  isAvailable Boolean @default(true) @map("is_available")
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category   Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([restaurantId, isActive, isAvailable])
+  @@index([restaurantId, categoryId, sortOrder])
+  @@map("products")
+}

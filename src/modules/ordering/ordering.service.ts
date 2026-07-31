@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { orderingRepository } from "./ordering.repository";
 import { orderStatusMachine } from "./order-status.machine";
 import { pricingService } from "./pricing.service";
-import { buildOrderNumber, todayRange } from "./order-number";
+import { buildOrderNumber, parseOrderNumber, todayRange } from "./order-number";
 import type { CreateOrderInput, ListOrdersQuery } from "./ordering.schema";
 import { webhookService } from "@/modules/integration";
 import {
@@ -87,70 +87,111 @@ export const orderingService = {
       ? OrderStatus.PENDING
       : OrderStatus.CONFIRMED;
 
-    const order = await prisma.$transaction(async (tx) => {
-      const { start, end } = todayRange(ctx.timezone);
+    /**
+     * Crea el pedido con numeración diaria.
+     * El offset permite reintentar si dos pedidos simultáneos
+     * calculan el mismo número.
+     */
+    const createWithNumber = (offset: number) =>
+      prisma.$transaction(async (tx) => {
+        const { start } = todayRange(ctx.timezone);
 
-      const todayCount = await tx.order.count({
-        where: {
-          restaurantId: ctx.restaurantId,
-          createdAt: { gte: start, lt: end },
-        },
-      });
+        // Fecha de negocio: medianoche local del restaurante.
+        const businessDate = new Date(start);
 
-      const created = await tx.order.create({
-        data: {
-          restaurantId: ctx.restaurantId,
-          tableId: ctx.tableId,
-          sessionId: ctx.sessionId,
-          guestTokenId: ctx.guestTokenId ?? null,
-          orderNumber: buildOrderNumber(todayCount + 1),
-          status: initialStatus,
-          subtotalCents: totals.subtotalCents,
-          totalCents: totals.totalCents,
-          notes: input.notes ?? null,
-          items: {
-            create: totals.lines.map((line) => ({
-              productId: line.productId,
-              productName: line.productName,
-              unitPriceCents: line.unitPriceCents,
-              quantity: line.quantity,
-              lineTotalCents: line.lineTotalCents,
-              notes: line.notes ?? null,
+        const todayOrders = await tx.order.findMany({
+          where: {
+            restaurantId: ctx.restaurantId,
+            businessDate,
+          },
+          select: { orderNumber: true },
+        });
+
+        const maxSeq = todayOrders.reduce(
+          (max, o) => Math.max(max, parseOrderNumber(o.orderNumber)),
+          0,
+        );
+
+        const created = await tx.order.create({
+          data: {
+            restaurantId: ctx.restaurantId,
+            tableId: ctx.tableId,
+            sessionId: ctx.sessionId,
+            guestTokenId: ctx.guestTokenId ?? null,
+            orderNumber: buildOrderNumber(maxSeq + 1 + offset),
+            businessDate,
+            status: initialStatus,
+            subtotalCents: totals.subtotalCents,
+            totalCents: totals.totalCents,
+            notes: input.notes ?? null,
+            items: {
+              create: totals.lines.map((line) => ({
+                productId: line.productId,
+                productName: line.productName,
+                unitPriceCents: line.unitPriceCents,
+                quantity: line.quantity,
+                lineTotalCents: line.lineTotalCents,
+                notes: line.notes ?? null,
+              })),
+            },
+          },
+          include: { items: true },
+        });
+
+        await tx.orderStatusHistory.create({
+          data: {
+            orderId: created.id,
+            fromStatus: null,
+            toStatus: initialStatus,
+            source: actor.source,
+            actorId: actor.id ?? null,
+            actorName: actor.name ?? null,
+          },
+        });
+
+        await webhookService.enqueue(tx, ctx.restaurantId, "order.created", {
+          order: {
+            id: created.id,
+            orderNumber: created.orderNumber,
+            tableId: created.tableId,
+            status: created.status,
+            totalCents: created.totalCents,
+            items: created.items.map((i) => ({
+              productId: i.productId,
+              productName: i.productName,
+              quantity: i.quantity,
+              lineTotalCents: i.lineTotalCents,
             })),
           },
-        },
-        include: { items: true },
+        });
+
+        return created;
       });
 
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId: created.id,
-          fromStatus: null,
-          toStatus: initialStatus,
-          source: actor.source,
-          actorId: actor.id ?? null,
-          actorName: actor.name ?? null,
-        },
-      });
+    const MAX_RETRIES = 5;
+    let order: Awaited<ReturnType<typeof createWithNumber>> | null = null;
 
-      await webhookService.enqueue(tx, ctx.restaurantId, "order.created", {
-        order: {
-          id: created.id,
-          orderNumber: created.orderNumber,
-          tableId: created.tableId,
-          status: created.status,
-          totalCents: created.totalCents,
-          items: created.items.map((i) => ({
-            productId: i.productId,
-            productName: i.productName,
-            quantity: i.quantity,
-            lineTotalCents: i.lineTotalCents,
-          })),
-        },
-      });
+    for (let offset = 0; offset < MAX_RETRIES; offset++) {
+      try {
+        order = await createWithNumber(offset);
+        break;
+      } catch (error) {
+        const isDuplicateNumber =
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          (error as { code: string }).code === "P2002";
 
-      return created;
-    });
+        if (!isDuplicateNumber || offset === MAX_RETRIES - 1) throw error;
+      }
+    }
+
+    if (!order) {
+      throw new BusinessRuleError(
+        "ORDER_NUMBER_COLLISION",
+        "No pudimos generar el número de pedido. Intentá de nuevo.",
+      );
+    }
 
     return toOrderDTO(order);
   },

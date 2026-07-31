@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { todayRange } from "../src/modules/ordering/order-number";
 
 const adapter = new PrismaPg({
   connectionString: process.env["DIRECT_URL"] ?? "",
@@ -8,38 +9,35 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const restaurants = await prisma.restaurant.findMany({
-    select: { id: true, name: true, slug: true },
+  const orders = await prisma.order.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: { orderNumber: true, createdAt: true, status: true },
   });
 
-  const tables = await prisma.table.findMany({
-    orderBy: { sortOrder: "asc" },
-    select: { label: true, code: true, restaurantId: true, isActive: true },
-  });
-
-  console.log("\n--- RESTAURANTES EN LA BASE ---");
-  restaurants.forEach((r) => console.log(`  ${r.id}  ${r.name}`));
-
-  console.log("\n--- LO QUE DICE TU .env ---");
-  console.log(`  ${process.env["PUBLIC_API_RESTAURANT_ID"]}`);
-
-  console.log("\n--- MESAS ---");
-  tables.forEach((t) =>
+  console.log("\n--- ÚLTIMOS PEDIDOS (UTC) ---");
+  orders.forEach((o) =>
     console.log(
-      `  ${t.label}  code=${t.code}  activa=${t.isActive}  rest=${t.restaurantId}`,
+      `  ${o.orderNumber}  ${o.createdAt.toISOString()}  ${o.status}`,
     ),
   );
 
-  const envId = process.env["PUBLIC_API_RESTAURANT_ID"];
-  const match = restaurants.some((r) => r.id === envId);
-  console.log(
-    `\n>>> ¿El ID del .env existe en la base? ${match ? "SÍ" : "NO"}\n`,
-  );
+  console.log(`\nTotal en la base: ${await prisma.order.count()}`);
+
+  const range = todayRange("America/Mexico_City");
+
+  console.log("\n--- RANGO DE HOY (México) ---");
+  console.log(`  ahora:  ${new Date().toISOString()}`);
+  console.log(`  desde:  ${range.start.toISOString()}`);
+  console.log(`  hasta:  ${range.end.toISOString()}`);
+
+  const enRango = await prisma.order.count({
+    where: { createdAt: { gte: range.start, lt: range.end } },
+  });
+
+  console.log(`  pedidos en ese rango: ${enRango}\n`);
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
+  .catch(console.error)
   .finally(() => prisma.$disconnect());

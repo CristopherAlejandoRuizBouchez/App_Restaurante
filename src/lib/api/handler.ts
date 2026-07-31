@@ -97,21 +97,18 @@ function handleError(
 
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2002") {
+      const target = (error.meta as { target?: string[] } | undefined)?.target;
+      const fields = Array.isArray(target) ? target.join(", ") : "desconocido";
+
+      logger.warn("request.unique_violation", { ...base, target });
+
       return fail(
         {
           code: ErrorCode.CONFLICT,
-          message: "Ya existe un registro con esos datos",
+          message: isProduction
+            ? "Ya existe un registro con esos datos"
+            : `Restricción única violada en: ${fields}`,
           status: 409,
-        },
-        requestId,
-      );
-    }
-    if (error.code === "P2025") {
-      return fail(
-        {
-          code: ErrorCode.NOT_FOUND,
-          message: "Recurso no encontrado",
-          status: 404,
         },
         requestId,
       );

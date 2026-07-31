@@ -12,24 +12,53 @@ export function buildOrderNumber(dailySequence: number): string {
 }
 
 /** Rango del día actual en la zona horaria del restaurante. */
+/**
+ * Rango del día actual en la zona horaria del restaurante,
+ * expresado en UTC para comparar contra createdAt.
+ */
 export function todayRange(timezone: string): { start: Date; end: Date } {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
+  const now = new Date();
+
+  const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   });
 
-  const parts = formatter.formatToParts(new Date());
+  const parts = formatter.formatToParts(now);
+  const get = (type: Intl.DateTimeFormatPartTypes): number =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
 
-  const get = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((p) => p.type === type)?.value ?? "00";
-
-  const start = new Date(
-    `${get("year")}-${get("month")}-${get("day")}T00:00:00`,
+  // Cuánto difiere la hora local del restaurante respecto a UTC.
+  const localAsUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour") % 24,
+    get("minute"),
+    get("second"),
   );
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+
+  const offsetMs = localAsUtc - Math.floor(now.getTime() / 1000) * 1000;
+
+  // Medianoche local, convertida a UTC.
+  const startLocal = Date.UTC(get("year"), get("month") - 1, get("day"));
+  const start = new Date(startLocal - offsetMs);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
   return { start, end };
+}
+
+/** Convierte "A-047" de vuelta a su número secuencial (47). */
+export function parseOrderNumber(orderNumber: string): number {
+  const [letter, digits] = orderNumber.split("-");
+  if (!letter || !digits) return 0;
+
+  const letterIndex = letter.charCodeAt(0) - 65;
+  return letterIndex * 999 + Number(digits);
 }

@@ -1,5 +1,6 @@
 @baseUrl = http://localhost:3000
-@apiKey = sk_test_7db7aca9589122e0f259b5f8bedcfa582f5088f170caf596
+@apiKey ="sk_test_213029c35c8e18e86992c644059c4dd0de9942642df88576"
+@tableCode = c35b88ac20
 
 # Pegá acá el "id" que devuelve el bloque "Crear pedido" (201)
 @orderId = cms86rchc0007qkuxljiuirkl
@@ -71,7 +72,7 @@ GET {{baseUrl}}/api/internal/products?onlyAvailable=true
 ### ========== FLUJO DEL COMENSAL ==========
 
 ### 1. Escanear QR
-POST {{baseUrl}}/api/public/session/ddecbf8d31
+POST {{baseUrl}}/api/public/session/{{tableCode}}
 
 ### 2. Ver el menú
 GET {{baseUrl}}/api/public/menu

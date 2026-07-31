@@ -80,7 +80,11 @@ model Order {
   /**
    * Número corto y legible: #A-047. Único por restaurante y día.
    */
-  orderNumber String @map("order_number")
+  orderNumber  String   @map("order_number")
+  /**
+   * Fecha de negocio (día local del restaurante), para reiniciar la numeración.
+   */
+  businessDate DateTime @map("business_date") @db.Date
 
   status        OrderStatus    @default(PENDING)
   paymentStatus PaymentStatus  @default(UNPAID) @map("payment_status")
@@ -103,7 +107,7 @@ model Order {
   items      OrderItem[]
   history    OrderStatusHistory[]
 
-  @@unique([restaurantId, orderNumber])
+  @@unique([restaurantId, businessDate, orderNumber])
   @@index([restaurantId, status, createdAt])
   @@index([restaurantId, createdAt])
   @@index([sessionId])

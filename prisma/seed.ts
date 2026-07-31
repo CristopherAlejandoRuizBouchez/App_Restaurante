@@ -175,6 +175,39 @@ async function main() {
       })),
     });
   }
+
+  // ---------- API Key de desarrollo ----------
+
+  const { createHash } = await import("node:crypto");
+
+  const existingKey = await prisma.apiKey.findFirst({
+    where: { restaurantId: restaurant.id, name: "Make (desarrollo)" },
+  });
+
+  let apiKeyPlain: string | null = null;
+
+  if (!existingKey) {
+    apiKeyPlain = "sk_test_" + randomBytes(24).toString("hex");
+
+    await prisma.apiKey.create({
+      data: {
+        restaurantId: restaurant.id,
+        name: "Make (desarrollo)",
+        keyHash: createHash("sha256").update(apiKeyPlain).digest("hex"),
+        keyPrefix: apiKeyPlain.slice(0, 16),
+        scopes: [
+          "products:read",
+          "products:write",
+          "categories:read",
+          "tables:read",
+          "orders:read",
+          "orders:write",
+          "webhooks:manage",
+        ],
+      },
+    });
+  }
+
   const tables = await prisma.table.findMany({
     where: { restaurantId: restaurant.id },
     orderBy: { sortOrder: "asc" },
@@ -188,6 +221,11 @@ async function main() {
   console.log("\nMesas:");
   tables.forEach((t) => console.log(`  ${t.label} -> /m/${t.code}`));
   console.log("");
+
+  if (apiKeyPlain) {
+    console.log(`\nAPI Key (guardala, no se vuelve a mostrar):`);
+    console.log(`  ${apiKeyPlain}`);
+  }
 }
 
 main()

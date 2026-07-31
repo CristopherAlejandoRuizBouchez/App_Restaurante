@@ -85,6 +85,17 @@ export const tableSessionService = {
     };
   },
 
+  /** Devuelve la sesión abierta de la mesa, o abre una nueva. */
+  async getOrOpenSession(restaurantId: string, tableId: string) {
+    const existing = await orderingRepository.findOpenSession(
+      restaurantId,
+      tableId,
+    );
+    if (existing) return existing;
+
+    return orderingRepository.createSession(restaurantId, tableId);
+  },
+
   async closeSession(restaurantId: string, sessionId: string) {
     const session = await orderingRepository.findSessionById(
       restaurantId,

@@ -12,13 +12,15 @@ model Restaurant {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  memberships   Membership[]
-  tables        Table[]
-  devices       Device[]
-  categories    Category[]
-  products      Product[]
-  tableSessions TableSession[]
-  orders        Order[]
+  memberships      Membership[]
+  tables           Table[]
+  devices          Device[]
+  categories       Category[]
+  products         Product[]
+  tableSessions    TableSession[]
+  orders           Order[]
+  apiKeys          ApiKey[]
+  webhookEndpoints WebhookEndpoint[]
 
   @@index([slug])
   @@map("restaurants")

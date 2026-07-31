@@ -1,11 +1,22 @@
-import { requireApiKey } from "@/lib/api/auth-api-key";
+import { requireScope } from "@/lib/api/auth-api-key";
 import { withApiHandler } from "@/lib/api/handler";
-import { ok } from "@/lib/api/response";
-import { catalogService } from "@/modules/catalog";
+import { paginated } from "@/lib/api/response";
+import { listOrdersQuerySchema, orderingService } from "@/modules/ordering";
 
 export const GET = withApiHandler(async ({ req, requestId }) => {
-  const { restaurantId } = requireApiKey(req);
-  const menu = await catalogService.getPublicMenu(restaurantId);
+  const { restaurantId } = await requireScope(req, "orders:read");
+  const query = listOrdersQuerySchema.parse(
+    Object.fromEntries(req.nextUrl.searchParams),
+  );
 
-  return ok({ menu }, requestId);
+  const { orders, total } = await orderingService.listOrders(
+    restaurantId,
+    query,
+  );
+
+  return paginated(
+    orders,
+    { page: query.page, pageSize: query.pageSize, total },
+    requestId,
+  );
 });

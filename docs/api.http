@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:3000
-@apiKey = sk_test_3c2820b2dbd2e477f0af528eb829f1c1c033a2c8b312d1e5
+@apiKey = sk_test_7db7aca9589122e0f259b5f8bedcfa582f5088f170caf596
 
 # Pegá acá el "id" que devuelve el bloque "Crear pedido" (201)
 @orderId = cms86rchc0007qkuxljiuirkl
@@ -203,3 +203,49 @@ GET {{baseUrl}}/api/v1/products
 ### API Key inválida (401)
 GET {{baseUrl}}/api/v1/products
 Authorization: Bearer sk_test_incorrecta
+
+
+
+
+
+
+### ========== IDEMPOTENCIA ==========
+
+@tableId = cms6xodyp0004d8uxpm1srg1v
+@productId = cms70otc2000cmouxt30z4gjb
+
+### Listar mesas v1
+GET {{baseUrl}}/api/v1/tables
+Authorization: Bearer {{apiKey}}
+
+### 1. Crear pedido desde Make
+POST {{baseUrl}}/api/v1/orders
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+Idempotency-Key: prueba-001
+
+{ "tableId": "{{tableId}}", "items": [{ "productId": "{{productId}}", "quantity": 2 }] }
+
+### 2. MISMA clave, mismo cuerpo -> mismo pedido
+POST {{baseUrl}}/api/v1/orders
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+Idempotency-Key: prueba-001
+
+{ "tableId": "{{tableId}}", "items": [{ "productId": "{{productId}}", "quantity": 2 }] }
+
+### 3. MISMA clave, cuerpo distinto -> 409
+POST {{baseUrl}}/api/v1/orders
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+Idempotency-Key: prueba-001
+
+{ "tableId": "{{tableId}}", "items": [{ "productId": "{{productId}}", "quantity": 5 }] }
+
+### 4. Clave nueva -> pedido distinto
+POST {{baseUrl}}/api/v1/orders
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+Idempotency-Key: prueba-002
+
+{ "tableId": "{{tableId}}", "items": [{ "productId": "{{productId}}", "quantity": 1 }] }

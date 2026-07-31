@@ -1,25 +1,15 @@
-import { timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
-import { UnauthorizedError } from "@/lib/errors";
-import { env } from "@/lib/env";
+import type { ApiScope } from "@/config/scopes";
+import { ForbiddenError, UnauthorizedError } from "@/lib/errors";
+import { apiKeyService } from "@/modules/integration";
 
 export interface ApiKeyContext {
+  apiKeyId: string;
   restaurantId: string;
+  scopes: string[];
 }
 
-/** Comparación en tiempo constante: no filtra información por latencia. */
-function safeCompare(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
-}
-
-/**
- * Valida la API Key del header Authorization: Bearer <key>.
- * TEMPORAL: en el módulo 4 esto pasa a keys en base de datos con scopes.
- */
-export function requireApiKey(req: NextRequest): ApiKeyContext {
+function extractKey(req: NextRequest): string {
   const header = req.headers.get("authorization");
 
   if (!header?.startsWith("Bearer ")) {
@@ -28,11 +18,37 @@ export function requireApiKey(req: NextRequest): ApiKeyContext {
     );
   }
 
-  const key = header.slice("Bearer ".length).trim();
+  return header.slice("Bearer ".length).trim();
+}
 
-  if (!safeCompare(key, env.PUBLIC_API_KEY)) {
-    throw new UnauthorizedError("API Key inválida");
+/** Valida la API Key. Lanza 401 si no sirve. */
+export async function requireApiKey(req: NextRequest): Promise<ApiKeyContext> {
+  const key = extractKey(req);
+  const resolved = await apiKeyService.resolve(key);
+
+  if (!resolved) throw new UnauthorizedError("API Key inválida o revocada");
+
+  apiKeyService.touch(resolved.id);
+
+  return {
+    apiKeyId: resolved.id,
+    restaurantId: resolved.restaurantId,
+    scopes: resolved.scopes,
+  };
+}
+
+/** Valida la API Key Y exige un scope concreto. Lanza 401 o 403. */
+export async function requireScope(
+  req: NextRequest,
+  scope: ApiScope,
+): Promise<ApiKeyContext> {
+  const ctx = await requireApiKey(req);
+
+  if (!ctx.scopes.includes(scope)) {
+    throw new ForbiddenError(
+      `Esta API Key no tiene el scope requerido: ${scope}`,
+    );
   }
 
-  return { restaurantId: env.PUBLIC_API_RESTAURANT_ID };
+  return ctx;
 }

@@ -1,0 +1,112 @@
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  EXHAUSTED
+}
+
+model ApiKey {
+  id           String @id @default(cuid())
+  restaurantId String @map("restaurant_id")
+
+  name      String
+  /**
+   * SHA-256 de la key. El valor en claro se muestra una sola vez.
+   */
+  keyHash   String @unique @map("key_hash")
+  /**
+   * Primeros caracteres, para identificarla en la UI: "sk_live_a3f2..."
+   */
+  keyPrefix String @map("key_prefix")
+
+  scopes String[]
+
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+  expiresAt  DateTime? @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurant      Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  idempotencyKeys IdempotencyKey[]
+
+  @@index([restaurantId, isActive])
+  @@map("api_keys")
+}
+
+model IdempotencyKey {
+  id       String @id @default(cuid())
+  apiKeyId String @map("api_key_id")
+
+  key         String
+  requestHash String @map("request_hash")
+
+  responseStatus Int  @map("response_status")
+  responseBody   Json @map("response_body")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  @@unique([apiKeyId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+model WebhookEndpoint {
+  id           String @id @default(cuid())
+  restaurantId String @map("restaurant_id")
+
+  name   String
+  url    String
+  /**
+   * Secreto para la firma HMAC. Se muestra una sola vez.
+   */
+  secret String
+  /**
+   * Eventos suscritos: ["order.created", "order.status_changed"]
+   */
+  events String[]
+
+  isActive         Boolean   @default(true) @map("is_active")
+  consecutiveFails Int       @default(0) @map("consecutive_fails")
+  disabledAt       DateTime? @map("disabled_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([restaurantId, isActive])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id         String @id @default(cuid())
+  endpointId String @map("endpoint_id")
+
+  eventId   String @map("event_id")
+  eventType String @map("event_type")
+  payload   Json
+
+  status        WebhookDeliveryStatus @default(PENDING)
+  attempts      Int                   @default(0)
+  nextAttemptAt DateTime              @default(now()) @map("next_attempt_at")
+
+  lastStatusCode Int?      @map("last_status_code")
+  lastError      String?   @map("last_error")
+  deliveredAt    DateTime? @map("delivered_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
+}

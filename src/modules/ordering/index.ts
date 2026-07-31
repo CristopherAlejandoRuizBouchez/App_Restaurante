@@ -7,5 +7,6 @@ export {
   cancelOrderSchema,
   markPaidSchema,
   listOrdersQuerySchema,
+  createOrderApiSchema,
 } from "./ordering.schema";
 export type { OrderDTO, OrderItemDTO } from "./ordering.mapper";

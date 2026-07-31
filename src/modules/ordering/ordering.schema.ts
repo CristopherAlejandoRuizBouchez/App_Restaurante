@@ -47,3 +47,9 @@ export type OrderItemInput = z.infer<typeof orderItemInputSchema>;
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;
+
+export const createOrderApiSchema = createOrderSchema.extend({
+  tableId: z.string().min(1, "tableId es obligatorio"),
+});
+
+export type CreateOrderApiInput = z.infer<typeof createOrderApiSchema>;

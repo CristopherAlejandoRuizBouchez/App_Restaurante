@@ -12,11 +12,13 @@ model Restaurant {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  memberships Membership[]
-  tables      Table[]
-  devices     Device[]
-  categories  Category[]
-  products    Product[]
+  memberships   Membership[]
+  tables        Table[]
+  devices       Device[]
+  categories    Category[]
+  products      Product[]
+  tableSessions TableSession[]
+  orders        Order[]
 
   @@index([slug])
   @@map("restaurants")
@@ -30,6 +32,9 @@ model Table {
   label     String
   seats     Int    @default(4)
   sortOrder Int    @default(0) @map("sort_order")
+
+  sessions TableSession[]
+  orders   Order[]
 
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at")

@@ -49,7 +49,7 @@ model Session {
   expiresAt DateTime @map("expires_at")
 
   ip        String?
-  userAgent String? @map("user_agent")
+  userAgent String?  @map("user_agent")
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

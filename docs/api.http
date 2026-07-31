@@ -1,9 +1,17 @@
 @baseUrl = http://localhost:3000
+@apiKey = sk_test_3c2820b2dbd2e477f0af528eb829f1c1c033a2c8b312d1e5
+
+# Pegá acá el "id" que devuelve el bloque "Crear pedido" (201)
+@orderId = cms86rchc0007qkuxljiuirkl
+
+### ========== SALUD ==========
 
 ### Health check
 GET {{baseUrl}}/api/health
 
-### Login (guarda la cookie automáticamente)
+### ========== AUTENTICACIÓN ==========
+
+### Login
 POST {{baseUrl}}/api/internal/auth/login
 Content-Type: application/json
 
@@ -15,7 +23,7 @@ Content-Type: application/json
 ### Sesión actual
 GET {{baseUrl}}/api/internal/auth/me
 
-### Contraseña incorrecta (debe dar 401)
+### Contraseña incorrecta (401)
 POST {{baseUrl}}/api/internal/auth/login
 Content-Type: application/json
 
@@ -24,7 +32,7 @@ Content-Type: application/json
   "password": "incorrecta"
 }
 
-### Email inválido (debe dar 400 con detalle)
+### Email inválido (400)
 POST {{baseUrl}}/api/internal/auth/login
 Content-Type: application/json
 
@@ -36,13 +44,15 @@ Content-Type: application/json
 ### Logout
 POST {{baseUrl}}/api/internal/auth/logout
 
-### Datos del restaurante (requiere sesión)
+### ========== TENANT ==========
+
+### Datos del restaurante
 GET {{baseUrl}}/api/internal/restaurant
 
-### Listar mesas (requiere sesión)
+### Listar mesas
 GET {{baseUrl}}/api/internal/tables
 
-### ---------- CATÁLOGO ----------
+### ========== CATÁLOGO ==========
 
 ### Listar categorías
 GET {{baseUrl}}/api/internal/categories
@@ -50,27 +60,146 @@ GET {{baseUrl}}/api/internal/categories
 ### Listar productos
 GET {{baseUrl}}/api/internal/products
 
+### Solo disponibles
+GET {{baseUrl}}/api/internal/products?onlyAvailable=true
 
+### ========== FLUJO DEL COMENSAL ==========
 
-### ---------- API PÚBLICA v1 (Make) ----------
+### 1. Escanear QR
+POST {{baseUrl}}/api/public/session/ddecbf8d31
 
-@apiKey = sk_test_3c2820b2dbd2e477f0af528eb829f1c1c033a2c8b312d1e5
+### 2. Ver el menú
+GET {{baseUrl}}/api/public/menu
 
-### Productos v1
+### 3. Crear pedido  --> COPIÁ EL "id" DE LA RESPUESTA A @orderId
+POST {{baseUrl}}/api/public/orders
+Content-Type: application/json
+
+{
+  "items": [
+    { "productId": "cms70otc20004mouxb110dpe6", "quantity": 2 },
+    { "productId": "cms70otc20006moux6yqrdmwu", "quantity": 1, "notes": "Sin cebolla" }
+  ],
+  "notes": "Mesa junto a la ventana"
+}
+
+### 4. Mis pedidos y total de la mesa
+GET {{baseUrl}}/api/public/orders
+
+### 5. Seguimiento de mi pedido
+GET {{baseUrl}}/api/public/orders/{{orderId}}
+
+### Producto inexistente (422)
+POST {{baseUrl}}/api/public/orders
+Content-Type: application/json
+
+{
+  "items": [{ "productId": "no-existe", "quantity": 1 }]
+}
+
+### Sin items (400)
+POST {{baseUrl}}/api/public/orders
+Content-Type: application/json
+
+{
+  "items": []
+}
+
+### ========== FLUJO DEL PERSONAL ==========
+
+### Listar pedidos
+GET {{baseUrl}}/api/internal/orders
+
+### Solo pendientes
+GET {{baseUrl}}/api/internal/orders?status=PENDING
+
+### Detalle con historial
+GET {{baseUrl}}/api/internal/orders/{{orderId}}
+
+### Confirmar
+PATCH {{baseUrl}}/api/internal/orders/{{orderId}}/status
+Content-Type: application/json
+
+{ "status": "CONFIRMED" }
+
+### A preparación
+PATCH {{baseUrl}}/api/internal/orders/{{orderId}}/status
+Content-Type: application/json
+
+{ "status": "PREPARING" }
+
+### Listo
+PATCH {{baseUrl}}/api/internal/orders/{{orderId}}/status
+Content-Type: application/json
+
+{ "status": "READY" }
+
+### Entregado
+PATCH {{baseUrl}}/api/internal/orders/{{orderId}}/status
+Content-Type: application/json
+
+{ "status": "DELIVERED" }
+
+### TRANSICIÓN INVÁLIDA: volver a PREPARING (422)
+PATCH {{baseUrl}}/api/internal/orders/{{orderId}}/status
+Content-Type: application/json
+
+{ "status": "PREPARING" }
+
+### Cancelar (solo si no está en estado terminal)
+POST {{baseUrl}}/api/internal/orders/{{orderId}}/cancel
+Content-Type: application/json
+
+{ "reason": "El cliente se retiró" }
+
+### Cobrar
+POST {{baseUrl}}/api/internal/orders/{{orderId}}/pay
+Content-Type: application/json
+
+{ "paymentMethod": "CASH" }
+
+### Cobrar de nuevo (422 - ORDER_ALREADY_PAID)
+POST {{baseUrl}}/api/internal/orders/{{orderId}}/pay
+Content-Type: application/json
+
+{ "paymentMethod": "CASH" }
+
+### ========== API PÚBLICA v1 (Make) ==========
+
+### Productos
 GET {{baseUrl}}/api/v1/products
 Authorization: Bearer {{apiKey}}
 
-### Categorías v1
+### Categorías
 GET {{baseUrl}}/api/v1/categories
 Authorization: Bearer {{apiKey}}
 
-### Menú completo v1
+### Menú completo
 GET {{baseUrl}}/api/v1/menu
 Authorization: Bearer {{apiKey}}
 
-### Sin API Key (debe dar 401)
+### Listar pedidos
+GET {{baseUrl}}/api/v1/orders
+Authorization: Bearer {{apiKey}}
+
+### Polling incremental (lo que usará Make)
+GET {{baseUrl}}/api/v1/orders?updatedSince=2026-07-30T00:00:00.000Z
+Authorization: Bearer {{apiKey}}
+
+### Detalle de pedido
+GET {{baseUrl}}/api/v1/orders/{{orderId}}
+Authorization: Bearer {{apiKey}}
+
+### Cambiar estado desde Make
+PATCH {{baseUrl}}/api/v1/orders/{{orderId}}/status
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{ "status": "CONFIRMED" }
+
+### Sin API Key (401)
 GET {{baseUrl}}/api/v1/products
 
-### API Key inválida (debe dar 401)
+### API Key inválida (401)
 GET {{baseUrl}}/api/v1/products
 Authorization: Bearer sk_test_incorrecta

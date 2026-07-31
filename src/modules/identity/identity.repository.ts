@@ -59,4 +59,57 @@ export const identityRepository = {
       where: { expiresAt: { lt: new Date() } },
     });
   },
+
+  // ---------- Dispositivos ----------
+
+  listDevices(restaurantId: string) {
+    return prisma.device.findMany({
+      where: { restaurantId, isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    });
+  },
+
+  findDeviceById(restaurantId: string, id: string) {
+    return prisma.device.findFirst({
+      where: { id, restaurantId },
+    });
+  },
+
+  registerFailedPin(
+    deviceId: string,
+    attempts: number,
+    lockedUntil: Date | null,
+  ) {
+    return prisma.device.update({
+      where: { id: deviceId },
+      data: { failedAttempts: attempts, lockedUntil },
+    });
+  },
+
+  resetPinAttempts(deviceId: string) {
+    return prisma.device.update({
+      where: { id: deviceId },
+      data: { failedAttempts: 0, lockedUntil: null, lastSeenAt: new Date() },
+    });
+  },
+
+  createDeviceSession(data: {
+    deviceId: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }) {
+    return prisma.deviceSession.create({ data });
+  },
+
+  findDeviceSessionByTokenHash(tokenHash: string) {
+    return prisma.deviceSession.findUnique({
+      where: { tokenHash },
+      include: { device: true },
+    });
+  },
+
+  deleteDeviceSessionByTokenHash(tokenHash: string) {
+    return prisma.deviceSession.deleteMany({ where: { tokenHash } });
+  },
 };

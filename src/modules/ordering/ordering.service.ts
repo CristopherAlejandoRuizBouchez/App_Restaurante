@@ -10,9 +10,14 @@ import { orderingRepository } from "./ordering.repository";
 import { orderStatusMachine } from "./order-status.machine";
 import { pricingService } from "./pricing.service";
 import { buildOrderNumber, todayRange } from "./order-number";
-import { toOrderDTO, type OrderDTO } from "./ordering.mapper";
 import type { CreateOrderInput, ListOrdersQuery } from "./ordering.schema";
 import { webhookService } from "@/modules/integration";
+import {
+  toOrderDTO,
+  toKitchenOrderDTO,
+  type OrderDTO,
+  type KitchenOrderDTO,
+} from "./ordering.mapper";
 
 export interface OrderActor {
   source: ActorSource;
@@ -292,5 +297,11 @@ export const orderingService = {
     if (!order) throw new NotFoundError("Pedido");
 
     return orderingRepository.findHistory(orderId);
+  },
+
+  /** Pedidos no terminales, para el tablero de cocina. */
+  async getActiveOrders(restaurantId: string): Promise<KitchenOrderDTO[]> {
+    const orders = await orderingRepository.findActiveOrders(restaurantId);
+    return orders.map(toKitchenOrderDTO);
   },
 };

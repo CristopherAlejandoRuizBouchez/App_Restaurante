@@ -312,3 +312,39 @@ Content-Type: application/json
   "name": "Key de solo lectura",
   "scopes": ["products:read", "orders:read"]
 }
+
+
+
+
+
+### ========== COCINA ==========
+
+### Listar dispositivos (sin auth)
+GET {{baseUrl}}/api/public/devices
+
+### Login con PIN (reemplazá deviceId)
+POST {{baseUrl}}/api/internal/auth/device
+Content-Type: application/json
+
+{ "deviceId": "cms6xoeej000bd8uxkc2rn6oz", "pin": "1234" }
+
+### PIN incorrecto (401)
+POST {{baseUrl}}/api/internal/auth/device
+Content-Type: application/json
+
+{ "deviceId": "cms6xoeej000bd8uxkc2rn6oz", "pin": "9999" }
+
+### PIN con letras (400)
+POST {{baseUrl}}/api/internal/auth/device
+Content-Type: application/json
+
+{ "deviceId": "cms6xoeej000bd8uxkc2rn6oz", "pin": "abcd" }
+
+### Pedidos activos (con sesión de dispositivo)
+GET {{baseUrl}}/api/internal/orders/active
+
+### Reportes con dispositivo (403 - KITCHEN no puede)
+GET {{baseUrl}}/api/internal/restaurant
+
+### Logout del dispositivo
+POST {{baseUrl}}/api/internal/auth/device/logout

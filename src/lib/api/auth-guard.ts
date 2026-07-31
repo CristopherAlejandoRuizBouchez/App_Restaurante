@@ -1,21 +1,37 @@
 import type { Permission } from "@/config/permissions";
 import { hasPermission } from "@/config/permissions";
 import { ForbiddenError, UnauthorizedError } from "@/lib/errors";
-import { authService, type AuthActor } from "@/modules/identity";
+import {
+  authService,
+  deviceAuthService,
+  type AuthActor,
+} from "@/modules/identity";
 import { getSessionToken } from "@/lib/api/session-cookie";
+import { getDeviceToken } from "@/lib/api/device-cookie";
 
-/** Exige sesión válida. Lanza 401 si no hay. */
+/**
+ * Exige una identidad válida: usuario del panel o dispositivo con PIN.
+ * Ambos devuelven el mismo AuthActor, así que los endpoints no cambian.
+ */
 export async function requireAuth(): Promise<AuthActor> {
-  const token = await getSessionToken();
-  if (!token) throw new UnauthorizedError("No hay sesión activa");
+  const userToken = await getSessionToken();
 
-  const actor = await authService.resolveActor(token);
-  if (!actor) throw new UnauthorizedError("Sesión inválida o expirada");
+  if (userToken) {
+    const actor = await authService.resolveActor(userToken);
+    if (actor) return actor;
+  }
 
-  return actor;
+  const deviceToken = await getDeviceToken();
+
+  if (deviceToken) {
+    const actor = await deviceAuthService.resolveActor(deviceToken);
+    if (actor) return actor;
+  }
+
+  throw new UnauthorizedError("No hay sesión activa");
 }
 
-/** Exige sesión válida Y un permiso concreto. Lanza 401 o 403. */
+/** Exige identidad válida Y un permiso concreto. Lanza 401 o 403. */
 export async function requirePermission(
   permission: Permission,
 ): Promise<AuthActor> {

@@ -60,8 +60,10 @@ model Session {
 }
 
 model Device {
-  id           String @id @default(cuid())
-  restaurantId String @map("restaurant_id")
+  id             String    @id @default(cuid())
+  restaurantId   String    @map("restaurant_id")
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until")
 
   name    String
   pinHash String @map("pin_hash")

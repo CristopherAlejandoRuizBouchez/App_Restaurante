@@ -6,3 +6,14 @@ export const loginSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const devicePinSchema = z.object({
+  deviceId: z.string().min(1, "Seleccioná un dispositivo"),
+  pin: z
+    .string()
+    .min(4, "El PIN debe tener al menos 4 dígitos")
+    .max(8)
+    .regex(/^\d+$/, "El PIN solo puede tener números"),
+});
+
+export type DevicePinInput = z.infer<typeof devicePinSchema>;

@@ -160,4 +160,22 @@ export const orderingRepository = {
       orderBy: { createdAt: "asc" },
     });
   },
+
+  findActiveOrders(restaurantId: string) {
+    return prisma.order.findMany({
+      where: {
+        restaurantId,
+        status: {
+          in: [
+            OrderStatus.PENDING,
+            OrderStatus.CONFIRMED,
+            OrderStatus.PREPARING,
+            OrderStatus.READY,
+          ],
+        },
+      },
+      include: { items: true, table: { select: { label: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+  },
 };

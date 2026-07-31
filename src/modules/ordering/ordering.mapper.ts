@@ -65,3 +65,13 @@ export function toOrderDTO(o: OrderWithItems): OrderDTO {
     items: o.items.map(toOrderItemDTO),
   };
 }
+
+export interface KitchenOrderDTO extends OrderDTO {
+  tableLabel: string;
+}
+
+export function toKitchenOrderDTO(
+  o: OrderWithItems & { table: { label: string } },
+): KitchenOrderDTO {
+  return { ...toOrderDTO(o), tableLabel: o.table.label };
+}

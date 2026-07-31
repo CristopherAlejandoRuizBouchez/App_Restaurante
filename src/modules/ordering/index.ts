@@ -9,4 +9,8 @@ export {
   listOrdersQuerySchema,
   createOrderApiSchema,
 } from "./ordering.schema";
-export type { OrderDTO, OrderItemDTO } from "./ordering.mapper";
+export type {
+  OrderDTO,
+  OrderItemDTO,
+  KitchenOrderDTO,
+} from "./ordering.mapper";

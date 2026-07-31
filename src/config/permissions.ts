@@ -8,6 +8,9 @@ export const PERMISSIONS = [
   "restaurant:read",
   "restaurant:update",
 
+  "webhook:manage",
+  "apikey:manage",
+
   "user:read",
   "user:invite",
   "user:update",
@@ -62,6 +65,8 @@ const ADMIN_PERMISSIONS: Permission[] = [
   "user:update",
   "device:manage",
   "integration:manage",
+  "webhook:manage",
+  "apikey:manage",
 ];
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {

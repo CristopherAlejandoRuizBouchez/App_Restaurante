@@ -63,6 +63,11 @@ GET {{baseUrl}}/api/internal/products
 ### Solo disponibles
 GET {{baseUrl}}/api/internal/products?onlyAvailable=true
 
+
+
+
+
+
 ### ========== FLUJO DEL COMENSAL ==========
 
 ### 1. Escanear QR
@@ -104,6 +109,11 @@ Content-Type: application/json
 {
   "items": []
 }
+
+
+
+
+
 
 ### ========== FLUJO DEL PERSONAL ==========
 
@@ -249,3 +259,56 @@ Content-Type: application/json
 Idempotency-Key: prueba-002
 
 { "tableId": "{{tableId}}", "items": [{ "productId": "{{productId}}", "quantity": 1 }] }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### ========== WEBHOOKS ==========
+
+@cronSecret = 5SIxBYNnwdZ2N2r/C4J+1d7R6EYVfnBuiG0kF7m4mL0=
+
+### Crear webhook (requiere login) — pegá tu URL de webhook.site
+POST {{baseUrl}}/api/internal/integrations/webhooks
+Content-Type: application/json
+
+{
+  "name": "Make - pruebas",
+  "url": "https://webhook.site/061628db-dc27-4001-bbd8-d411eb5d90f5",
+  "events": ["order.created", "order.status_changed", "order.cancelled"]
+}
+
+### Listar webhooks
+GET {{baseUrl}}/api/internal/integrations/webhooks
+
+### Despachar la cola manualmente
+GET {{baseUrl}}/api/cron/webhooks
+Authorization: Bearer {{cronSecret}}
+
+### Ver entregas (reemplazá el ID del webhook)
+GET {{baseUrl}}/api/internal/integrations/webhooks/PEGAR_WEBHOOK_ID/deliveries
+
+### Gestión de API Keys
+
+### Listar
+GET {{baseUrl}}/api/internal/integrations/api-keys
+
+### Crear
+POST {{baseUrl}}/api/internal/integrations/api-keys
+Content-Type: application/json
+
+{
+  "name": "Key de solo lectura",
+  "scopes": ["products:read", "orders:read"]
+}

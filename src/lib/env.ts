@@ -10,6 +10,7 @@ const envSchema = z.object({
   WEBHOOK_SIGNING_SECRET: z.string().min(32),
   NEXT_PUBLIC_APP_URL: z.string().url(),
   PUBLIC_API_RESTAURANT_ID: z.string().min(1),
+  CRON_SECRET: z.string().min(20),
 });
 
 function parseEnv() {

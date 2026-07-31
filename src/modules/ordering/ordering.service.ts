@@ -12,6 +12,7 @@ import { pricingService } from "./pricing.service";
 import { buildOrderNumber, todayRange } from "./order-number";
 import { toOrderDTO, type OrderDTO } from "./ordering.mapper";
 import type { CreateOrderInput, ListOrdersQuery } from "./ordering.schema";
+import { webhookService } from "@/modules/integration";
 
 export interface OrderActor {
   source: ActorSource;
@@ -127,6 +128,22 @@ export const orderingService = {
         },
       });
 
+      await webhookService.enqueue(tx, ctx.restaurantId, "order.created", {
+        order: {
+          id: created.id,
+          orderNumber: created.orderNumber,
+          tableId: created.tableId,
+          status: created.status,
+          totalCents: created.totalCents,
+          items: created.items.map((i) => ({
+            productId: i.productId,
+            productName: i.productName,
+            quantity: i.quantity,
+            lineTotalCents: i.lineTotalCents,
+          })),
+        },
+      });
+
       return created;
     });
 
@@ -187,6 +204,24 @@ export const orderingService = {
           reason: reason ?? null,
         },
       });
+
+      await webhookService.enqueue(
+        tx,
+        restaurantId,
+        toStatus === "CANCELLED" ? "order.cancelled" : "order.status_changed",
+        {
+          order: {
+            id: result.id,
+            orderNumber: result.orderNumber,
+            tableId: result.tableId,
+            status: result.status,
+            totalCents: result.totalCents,
+          },
+          previousStatus: order.status,
+          currentStatus: toStatus,
+          reason: reason ?? null,
+        },
+      );
 
       return result;
     });

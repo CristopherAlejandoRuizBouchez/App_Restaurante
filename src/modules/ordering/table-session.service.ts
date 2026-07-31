@@ -26,6 +26,18 @@ export const tableSessionService = {
    * Punto de entrada del QR: resuelve la mesa por su código,
    * abre sesión si no hay una activa, y emite un token de comensal.
    */
+
+  async getTableByCode(restaurantId: string, code: string) {
+    const table = await prisma.table.findFirst({
+      where: { restaurantId, code, isActive: true, deletedAt: null },
+      select: { id: true, label: true, code: true },
+    });
+
+    if (!table) throw new NotFoundError("Mesa");
+
+    return table;
+  },
+
   async openGuestSession(
     restaurantId: string,
     tableCode: string,

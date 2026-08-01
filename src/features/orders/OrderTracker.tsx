@@ -186,9 +186,15 @@ export function OrderTracker({
         </div>
       </section>
 
-      <div className="mt-6 px-4">
-        <Link href={`/m/${tableCode}`}>
+      <div className="mt-6 space-y-2 px-4">
+        <Link href={`/m/${tableCode}/cuenta`}>
           <Button variant="secondary" size="lg" className="w-full">
+            Ver cuenta de la mesa
+          </Button>
+        </Link>
+
+        <Link href={`/m/${tableCode}`}>
+          <Button variant="ghost" size="lg" className="w-full">
             Pedir algo más
           </Button>
         </Link>

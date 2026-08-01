@@ -5,6 +5,8 @@ import type { MenuCategoryDTO } from "@/modules/catalog";
 import { cn } from "@/lib/utils/cn";
 import { ProductCard } from "./ProductCard";
 import { CartBar } from "@/features/cart/CartBar";
+import Link from "next/link";
+import { Receipt } from "lucide-react";
 
 interface MenuScreenProps {
   tableCode: string;
@@ -56,6 +58,21 @@ export function MenuScreen({ tableCode, tableLabel, menu }: MenuScreenProps) {
             </button>
           ))}
         </nav>
+
+        <div className="flex items-center justify-between px-4 py-3">
+          <div>
+            <p className="text-xs text-ink-muted">Estás en</p>
+            <h1 className="text-lg font-semibold">{tableLabel}</h1>
+          </div>
+
+          <Link
+            href={`/m/${tableCode}/cuenta`}
+            className="flex items-center gap-1.5 rounded-xl border border-surface-border px-3 py-2 text-sm font-medium"
+          >
+            <Receipt size={16} />
+            Mi cuenta
+          </Link>
+        </div>
       </header>
 
       <main>

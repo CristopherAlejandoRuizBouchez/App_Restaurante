@@ -1,11 +1,13 @@
 import { createHash, randomBytes } from "node:crypto";
-import { NotFoundError } from "@/lib/errors";
+import { BusinessRuleError, NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { OrderStatus, type PaymentMethod } from "@/generated/prisma/client";
 import { orderingRepository } from "./ordering.repository";
-import { BusinessRuleError } from "@/lib/errors";
-import { OrderStatus, PaymentMethod } from "@/generated/prisma/client";
 
 const GUEST_TOKEN_TTL_HOURS = 12;
+
+/** Una sesión más vieja que esto se considera abandonada. */
+const MAX_SESSION_HOURS = 6;
 
 function generateGuestToken(): string {
   return randomBytes(32).toString("base64url");
@@ -25,21 +27,32 @@ export interface GuestSessionResult {
 
 export const tableSessionService = {
   /**
-   * Punto de entrada del QR: resuelve la mesa por su código,
-   * abre sesión si no hay una activa, y emite un token de comensal.
+   * Devuelve la sesión abierta de la mesa, o abre una nueva.
+   * Si la sesión abierta lleva demasiado tiempo, la cierra: ese cliente
+   * ya se fue y nadie cerró la cuenta.
    */
+  async getOrOpenSession(restaurantId: string, tableId: string) {
+    const existing = await orderingRepository.findOpenSession(
+      restaurantId,
+      tableId,
+    );
 
-  async getTableByCode(restaurantId: string, code: string) {
-    const table = await prisma.table.findFirst({
-      where: { restaurantId, code, isActive: true, deletedAt: null },
-      select: { id: true, label: true, code: true },
-    });
+    if (existing) {
+      const ageHours =
+        (Date.now() - existing.openedAt.getTime()) / (60 * 60 * 1000);
 
-    if (!table) throw new NotFoundError("Mesa");
+      if (ageHours < MAX_SESSION_HOURS) return existing;
 
-    return table;
+      await orderingRepository.closeSession(existing.id);
+    }
+
+    return orderingRepository.createSession(restaurantId, tableId);
   },
 
+  /**
+   * Punto de entrada del QR: resuelve la mesa por su código,
+   * abre sesión si hace falta, y emite un token de comensal.
+   */
   async openGuestSession(
     restaurantId: string,
     tableCode: string,
@@ -56,9 +69,7 @@ export const tableSessionService = {
 
     if (!table) throw new NotFoundError("Mesa");
 
-    const session =
-      (await orderingRepository.findOpenSession(restaurantId, table.id)) ??
-      (await orderingRepository.createSession(restaurantId, table.id));
+    const session = await this.getOrOpenSession(restaurantId, table.id);
 
     const token = generateGuestToken();
     const expiresAt = new Date(
@@ -99,15 +110,15 @@ export const tableSessionService = {
     };
   },
 
-  /** Devuelve la sesión abierta de la mesa, o abre una nueva. */
-  async getOrOpenSession(restaurantId: string, tableId: string) {
-    const existing = await orderingRepository.findOpenSession(
-      restaurantId,
-      tableId,
-    );
-    if (existing) return existing;
+  async getTableByCode(restaurantId: string, code: string) {
+    const table = await prisma.table.findFirst({
+      where: { restaurantId, code, isActive: true, deletedAt: null },
+      select: { id: true, label: true, code: true },
+    });
 
-    return orderingRepository.createSession(restaurantId, tableId);
+    if (!table) throw new NotFoundError("Mesa");
+
+    return table;
   },
 
   async closeSession(restaurantId: string, sessionId: string) {
@@ -187,7 +198,6 @@ export const tableSessionService = {
     );
 
     const active = orders.filter((o) => o.status !== OrderStatus.CANCELLED);
-
     const inKitchen = active.filter((o) => o.status !== OrderStatus.DELIVERED);
 
     if (inKitchen.length > 0) {

@@ -6,6 +6,7 @@ import {
   ClipboardList,
   LayoutGrid,
   LogOut,
+  Users,
   UtensilsCrossed,
 } from "lucide-react";
 import { apiFetch } from "@/lib/utils/api-client";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils/cn";
 
 const LINKS = [
   { href: "/panel", label: "Pedidos", icon: ClipboardList },
+  { href: "/panel/sala", label: "Sala", icon: Users },
   { href: "/panel/menu", label: "Menú", icon: UtensilsCrossed },
   { href: "/panel/mesas", label: "Mesas", icon: LayoutGrid },
 ];

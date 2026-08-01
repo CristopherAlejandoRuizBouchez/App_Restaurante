@@ -178,4 +178,34 @@ export const orderingRepository = {
       orderBy: { createdAt: "asc" },
     });
   },
+
+  /** Sesiones abiertas con sus pedidos, para la vista de sala. */
+  findOpenSessionsWithOrders(restaurantId: string) {
+    return prisma.tableSession.findMany({
+      where: { restaurantId, status: SessionStatus.OPEN },
+      include: {
+        table: { select: { id: true, label: true, seats: true } },
+        orders: {
+          include: { items: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+      orderBy: { openedAt: "asc" },
+    });
+  },
+
+  markSessionOrdersPaid(sessionId: string, paymentMethod: string) {
+    return prisma.order.updateMany({
+      where: {
+        sessionId,
+        paymentStatus: "UNPAID",
+        status: { not: OrderStatus.CANCELLED },
+      },
+      data: {
+        paymentStatus: "PAID",
+        paymentMethod: paymentMethod as never,
+        paidAt: new Date(),
+      },
+    });
+  },
 };

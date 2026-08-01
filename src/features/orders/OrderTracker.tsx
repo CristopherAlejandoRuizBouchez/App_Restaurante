@@ -123,8 +123,9 @@ export function OrderTracker({
       {!cancelled && (
         <ol className="mx-4 mt-6 space-y-1">
           {STEPS.map((step, index) => {
-            const done = index < currentIndex;
-            const active = index === currentIndex;
+            const finished = order.status === "DELIVERED";
+            const done = index < currentIndex || finished;
+            const active = index === currentIndex && !finished;
 
             return (
               <li key={step.status} className="flex items-center gap-3 py-2">

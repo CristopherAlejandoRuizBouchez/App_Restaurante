@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { todayRange } from "../src/modules/ordering/order-number";
 
 const adapter = new PrismaPg({
   connectionString: process.env["DIRECT_URL"] ?? "",
@@ -9,33 +8,44 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const orders = await prisma.order.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    select: { orderNumber: true, createdAt: true, status: true },
+  const sessions = await prisma.tableSession.findMany({
+    include: {
+      table: { select: { label: true } },
+      orders: {
+        select: { orderNumber: true, totalCents: true, status: true },
+      },
+    },
+    orderBy: { openedAt: "desc" },
+    take: 10,
   });
 
-  console.log("\n--- ÚLTIMOS PEDIDOS (UTC) ---");
-  orders.forEach((o) =>
+  console.log("\n--- SESIONES ---");
+  for (const s of sessions) {
     console.log(
-      `  ${o.orderNumber}  ${o.createdAt.toISOString()}  ${o.status}`,
+      `\n${s.table.label}  [${s.status}]  abierta ${s.openedAt.toISOString()}`,
+    );
+    console.log(`  sessionId: ${s.id}`);
+    s.orders.forEach((o) =>
+      console.log(
+        `    ${o.orderNumber}  $${(o.totalCents / 100).toFixed(2)}  ${o.status}`,
+      ),
+    );
+  }
+
+  const tokens = await prisma.guestToken.findMany({
+    include: { session: { include: { table: { select: { label: true } } } } },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+  });
+
+  console.log("\n\n--- TOKENS DE COMENSAL (más recientes) ---");
+  tokens.forEach((t) =>
+    console.log(
+      `  ${t.createdAt.toISOString()}  ->  ${t.session.table.label}  (sesión ${t.sessionId.slice(-6)})`,
     ),
   );
 
-  console.log(`\nTotal en la base: ${await prisma.order.count()}`);
-
-  const range = todayRange("America/Mexico_City");
-
-  console.log("\n--- RANGO DE HOY (México) ---");
-  console.log(`  ahora:  ${new Date().toISOString()}`);
-  console.log(`  desde:  ${range.start.toISOString()}`);
-  console.log(`  hasta:  ${range.end.toISOString()}`);
-
-  const enRango = await prisma.order.count({
-    where: { createdAt: { gte: range.start, lt: range.end } },
-  });
-
-  console.log(`  pedidos en ese rango: ${enRango}\n`);
+  console.log("");
 }
 
 main()

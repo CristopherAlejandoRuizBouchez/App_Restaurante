@@ -15,24 +15,25 @@ export default async function TablePage({
   const { tableCode } = await params;
   const restaurantId = env.PUBLIC_API_RESTAURANT_ID;
 
+  const table = await tableSessionService.getTableByCode(
+    restaurantId,
+    tableCode,
+  );
+
   const store = await cookies();
   const guestToken = store.get("smq_guest")?.value;
 
-  // Sin cookie válida -> al route handler que la crea.
-  if (!guestToken) {
+  const guest = guestToken
+    ? await tableSessionService.resolveGuest(guestToken)
+    : null;
+
+  // La cookie debe corresponder a ESTA mesa. Si el comensal cambió de mesa
+  // (o quedó una cookie vieja), se abre una sesión nueva.
+  if (!guest || guest.tableId !== table.id) {
     redirect(`/api/public/enter/${tableCode}`);
   }
 
-  const guest = await tableSessionService.resolveGuest(guestToken);
-
-  if (!guest) {
-    redirect(`/api/public/enter/${tableCode}`);
-  }
-
-  const [table, menu] = await Promise.all([
-    tableSessionService.getTableByCode(restaurantId, tableCode),
-    catalogService.getPublicMenu(restaurantId),
-  ]);
+  const menu = await catalogService.getPublicMenu(restaurantId);
 
   return (
     <MenuScreen tableCode={tableCode} tableLabel={table.label} menu={menu} />

@@ -31,3 +31,25 @@ body {
   color: var(--color-ink);
   overscroll-behavior-y: none;
 }
+
+@media print {
+  /* Oculta la navegación del panel al imprimir */
+  aside,
+  nav {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  @page {
+    margin: 1cm;
+  }
+}

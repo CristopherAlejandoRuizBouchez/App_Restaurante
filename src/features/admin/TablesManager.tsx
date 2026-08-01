@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Copy,
+  Download,
   Loader2,
   Pencil,
   Plus,
-  QrCode,
+  Printer,
   Trash2,
   Users,
 } from "lucide-react";
 import { apiFetch, ApiError } from "@/lib/utils/api-client";
 import { cn } from "@/lib/utils/cn";
+import { QrCode } from "@/features/qr/QrCode";
+import { downloadQr } from "@/features/qr/download-qr";
 import { TableModal, type TableData } from "./TableModal";
 
 export function TablesManager() {
   const qc = useQueryClient();
+
   const [modal, setModal] = useState<{ open: boolean; data: TableData | null }>(
     {
       open: false,
@@ -25,6 +29,9 @@ export function TablesManager() {
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => setOrigin(window.location.origin), []);
 
   const tables = useQuery({
     queryKey: ["admin-tables"],
@@ -35,8 +42,7 @@ export function TablesManager() {
     void qc.invalidateQueries({ queryKey: ["admin-tables"] });
 
   const copyUrl = async (code: string) => {
-    const url = `${window.location.origin}/m/${code}`;
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(`${origin}/m/${code}`);
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
   };
@@ -71,13 +77,23 @@ export function TablesManager() {
       <header className="mb-5 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Mesas</h1>
 
-        <button
-          onClick={() => setModal({ open: true, data: null })}
-          className="flex h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-3 text-sm font-medium text-white"
-        >
-          <Plus size={16} />
-          Nueva mesa
-        </button>
+        <div className="flex gap-2">
+          <Link
+            href="/panel/mesas/qr"
+            className="flex h-10 items-center gap-1.5 rounded-xl border border-surface-border bg-surface px-3 text-sm font-medium"
+          >
+            <Printer size={16} />
+            Imprimir QR
+          </Link>
+
+          <button
+            onClick={() => setModal({ open: true, data: null })}
+            className="flex h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-3 text-sm font-medium text-white"
+          >
+            <Plus size={16} />
+            Nueva mesa
+          </button>
+        </div>
       </header>
 
       {notice && (
@@ -137,17 +153,42 @@ export function TablesManager() {
                 </div>
               </header>
 
-              <div className="flex items-center gap-2 rounded-xl bg-surface-muted px-3 py-2">
-                <QrCode size={16} className="shrink-0 text-ink-muted" />
-                <code className="min-w-0 flex-1 truncate text-xs text-ink-muted">
-                  /m/{table.code}
-                </code>
-                <button
-                  onClick={() => copyUrl(table.code)}
-                  className="shrink-0 text-xs font-medium text-brand-600"
-                >
-                  {copied === table.code ? "Copiado" : <Copy size={14} />}
-                </button>
+              <div className="flex items-center gap-3 rounded-xl bg-surface-muted p-3">
+                {origin && (
+                  <QrCode
+                    value={`${origin}/m/${table.code}`}
+                    size={64}
+                    className="shrink-0 rounded"
+                  />
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <code className="block truncate text-xs text-ink-muted">
+                    /m/{table.code}
+                  </code>
+
+                  <div className="mt-1.5 flex gap-3">
+                    <button
+                      onClick={() => copyUrl(table.code)}
+                      className="text-xs font-medium text-brand-600"
+                    >
+                      {copied === table.code ? "Copiado" : "Copiar enlace"}
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        void downloadQr(
+                          `${origin}/m/${table.code}`,
+                          table.label,
+                        )
+                      }
+                      className="flex items-center gap-1 text-xs font-medium text-brand-600"
+                    >
+                      <Download size={12} />
+                      Descargar
+                    </button>
+                  </div>
+                </div>
               </div>
             </article>
           ))}

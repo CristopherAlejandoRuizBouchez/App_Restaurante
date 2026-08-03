@@ -1,16 +1,27 @@
 import { withApiHandler } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
-import { env } from "@/lib/env";
+import { NotFoundError, ValidationError } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
 import { deviceAuthService } from "@/modules/identity";
 
-/**
- * Lista los dispositivos para la pantalla de PIN.
- * Solo devuelve id y nombre: sin el PIN no sirve de nada.
- */
-export const GET = withApiHandler(async ({ requestId }) => {
-  const devices = await deviceAuthService.listDevices(
-    env.PUBLIC_API_RESTAURANT_ID,
-  );
+export const GET = withApiHandler(async ({ req, requestId }) => {
+  const slug = req.nextUrl.searchParams.get("restaurante");
 
-  return ok({ devices }, requestId);
+  if (!slug) {
+    throw new ValidationError("Falta el parámetro 'restaurante'");
+  }
+
+  const restaurant = await prisma.restaurant.findFirst({
+    where: { slug, isActive: true, deletedAt: null },
+    select: { id: true, name: true },
+  });
+
+  if (!restaurant) throw new NotFoundError("Restaurante");
+
+  const devices = await deviceAuthService.listDevices(restaurant.id);
+
+  return ok(
+    { devices, restaurantId: restaurant.id, restaurantName: restaurant.name },
+    requestId,
+  );
 });

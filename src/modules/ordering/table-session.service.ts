@@ -221,4 +221,69 @@ export const tableSessionService = {
 
     await orderingRepository.closeSession(sessionId);
   },
+
+  /**
+   * Resuelve la mesa Y su restaurante a partir del código del QR.
+   * Los códigos son únicos globalmente, así que no hace falta
+   * saber el restaurante de antemano.
+   */
+  async resolveTableByCode(code: string) {
+    const table = await prisma.table.findFirst({
+      where: { code, isActive: true, deletedAt: null },
+      select: {
+        id: true,
+        label: true,
+        code: true,
+        restaurantId: true,
+        restaurant: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            timezone: true,
+            currency: true,
+            requiresStaffConfirmation: true,
+            isActive: true,
+            deletedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!table) throw new NotFoundError("Mesa");
+    if (!table.restaurant.isActive || table.restaurant.deletedAt) {
+      throw new NotFoundError("Restaurante");
+    }
+
+    return table;
+  },
+
+  /** Abre sesión resolviendo el restaurante desde el código. */
+  async openGuestSessionByCode(code: string, nickname?: string) {
+    const table = await this.resolveTableByCode(code);
+
+    const session = await this.getOrOpenSession(table.restaurantId, table.id);
+
+    const token = generateGuestToken();
+    const expiresAt = new Date(
+      Date.now() + GUEST_TOKEN_TTL_HOURS * 60 * 60 * 1000,
+    );
+
+    await orderingRepository.createGuestToken({
+      sessionId: session.id,
+      tokenHash: hashGuestToken(token),
+      expiresAt,
+      nickname,
+    });
+
+    return {
+      sessionId: session.id,
+      tableId: table.id,
+      tableLabel: table.label,
+      restaurantId: table.restaurantId,
+      restaurantName: table.restaurant.name,
+      guestToken: token,
+      expiresAt,
+    };
+  },
 };

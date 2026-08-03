@@ -1,20 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Receipt } from "lucide-react";
 import type { MenuCategoryDTO } from "@/modules/catalog";
 import { cn } from "@/lib/utils/cn";
 import { ProductCard } from "./ProductCard";
 import { CartBar } from "@/features/cart/CartBar";
-import Link from "next/link";
-import { Receipt } from "lucide-react";
 
 interface MenuScreenProps {
   tableCode: string;
   tableLabel: string;
+  restaurantName: string;
   menu: MenuCategoryDTO[];
 }
 
-export function MenuScreen({ tableCode, tableLabel, menu }: MenuScreenProps) {
+export function MenuScreen({
+  tableCode,
+  tableLabel,
+  restaurantName,
+  menu,
+}: MenuScreenProps) {
   const [active, setActive] = useState<string | null>(menu[0]?.id ?? null);
 
   const scrollTo = (id: string) => {
@@ -26,7 +32,8 @@ export function MenuScreen({ tableCode, tableLabel, menu }: MenuScreenProps) {
 
   if (menu.length === 0) {
     return (
-      <div className="flex min-h-dvh items-center justify-center p-8 text-center">
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-2 p-8 text-center">
+        <p className="font-medium">{restaurantName}</p>
         <p className="text-ink-muted">
           El menú no está disponible en este momento.
         </p>
@@ -37,9 +44,19 @@ export function MenuScreen({ tableCode, tableLabel, menu }: MenuScreenProps) {
   return (
     <div className="pb-24">
       <header className="sticky top-0 z-20 border-b border-surface-border bg-surface">
-        <div className="px-4 py-3">
-          <p className="text-xs text-ink-muted">Estás en</p>
-          <h1 className="text-lg font-semibold">{tableLabel}</h1>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{restaurantName}</p>
+            <p className="text-xs text-ink-muted">{tableLabel}</p>
+          </div>
+
+          <Link
+            href={`/m/${tableCode}/cuenta`}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-surface-border px-3 py-2 text-sm font-medium"
+          >
+            <Receipt size={16} />
+            Mi cuenta
+          </Link>
         </div>
 
         <nav className="flex gap-2 overflow-x-auto px-4 pb-3">
@@ -58,21 +75,6 @@ export function MenuScreen({ tableCode, tableLabel, menu }: MenuScreenProps) {
             </button>
           ))}
         </nav>
-
-        <div className="flex items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-xs text-ink-muted">Estás en</p>
-            <h1 className="text-lg font-semibold">{tableLabel}</h1>
-          </div>
-
-          <Link
-            href={`/m/${tableCode}/cuenta`}
-            className="flex items-center gap-1.5 rounded-xl border border-surface-border px-3 py-2 text-sm font-medium"
-          >
-            <Receipt size={16} />
-            Mi cuenta
-          </Link>
-        </div>
       </header>
 
       <main>

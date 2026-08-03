@@ -13,7 +13,15 @@ interface Device {
 
 const PIN_LENGTH = 4;
 
-export function PinLogin({ devices }: { devices: Device[] }) {
+export function PinLogin({
+  devices,
+  slug,
+  restaurantName,
+}: {
+  devices: Device[];
+  slug: string;
+  restaurantName: string;
+}) {
   const router = useRouter();
   const [deviceId, setDeviceId] = useState<string | null>(
     devices.length === 1 ? (devices[0]?.id ?? null) : null,
@@ -31,10 +39,14 @@ export function PinLogin({ devices }: { devices: Device[] }) {
     try {
       await apiFetch("/api/internal/auth/device", {
         method: "POST",
-        body: JSON.stringify({ deviceId, pin: fullPin }),
+        body: JSON.stringify({
+          restaurantSlug: slug,
+          deviceId,
+          pin: fullPin,
+        }),
       });
 
-      router.push("/cocina");
+      router.push(`/cocina/${slug}`);
       router.refresh();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "No se pudo entrar");
@@ -56,7 +68,8 @@ export function PinLogin({ devices }: { devices: Device[] }) {
     return (
       <div className="flex min-h-dvh items-center justify-center p-8 text-center">
         <p className="text-ink-muted">
-          No hay dispositivos registrados. Pedile al administrador que cree uno.
+          No hay dispositivos registrados en {restaurantName}. Pedile al
+          administrador que cree uno.
         </p>
       </div>
     );
@@ -65,6 +78,7 @@ export function PinLogin({ devices }: { devices: Device[] }) {
   if (!deviceId) {
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-3 p-6">
+        <p className="text-center text-sm text-ink-muted">{restaurantName}</p>
         <h1 className="mb-2 text-center text-xl font-semibold">
           ¿Qué dispositivo sos?
         </h1>
@@ -87,7 +101,8 @@ export function PinLogin({ devices }: { devices: Device[] }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center p-6">
       <header className="mb-8 text-center">
-        <p className="text-sm text-ink-muted">{device?.name}</p>
+        <p className="text-xs text-ink-muted">{restaurantName}</p>
+        <p className="mt-1 text-sm text-ink-muted">{device?.name}</p>
         <h1 className="mt-1 text-xl font-semibold">Ingresá el PIN</h1>
       </header>
 

@@ -8,9 +8,8 @@ const envSchema = z.object({
   DIRECT_URL: z.string().url("DIRECT_URL debe ser una URL válida"),
   AUTH_SECRET: z.string().min(32, "AUTH_SECRET requiere 32+ caracteres"),
   WEBHOOK_SIGNING_SECRET: z.string().min(32),
-  NEXT_PUBLIC_APP_URL: z.string().url(),
-  PUBLIC_API_RESTAURANT_ID: z.string().min(1),
   CRON_SECRET: z.string().min(20),
+  NEXT_PUBLIC_APP_URL: z.string().url(),
 });
 
 function parseEnv() {

@@ -1,13 +1,11 @@
 import { withApiHandler } from "@/lib/api/handler";
 import { ok } from "@/lib/api/response";
 import { setGuestCookie } from "@/lib/api/guest-cookie";
-import { env } from "@/lib/env";
 import { tableSessionService } from "@/modules/ordering";
 
 export const POST = withApiHandler<{ tableCode: string }>(
   async ({ params, requestId }) => {
-    const result = await tableSessionService.openGuestSession(
-      env.PUBLIC_API_RESTAURANT_ID,
+    const result = await tableSessionService.openGuestSessionByCode(
       params.tableCode,
     );
 
@@ -18,6 +16,7 @@ export const POST = withApiHandler<{ tableCode: string }>(
         sessionId: result.sessionId,
         tableId: result.tableId,
         tableLabel: result.tableLabel,
+        restaurantName: result.restaurantName,
       },
       requestId,
     );

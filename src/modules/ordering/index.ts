@@ -14,3 +14,10 @@ export type {
   OrderItemDTO,
   KitchenOrderDTO,
 } from "./ordering.mapper";
+
+export {
+  waiterCallService,
+  WAITER_CALL_REASONS,
+  isValidReason,
+  type WaiterCallReason,
+} from "./waiter-call.service";

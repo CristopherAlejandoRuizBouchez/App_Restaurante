@@ -48,6 +48,7 @@ model TableSession {
   table       Table        @relation(fields: [tableId], references: [id], onDelete: Cascade)
   guestTokens GuestToken[]
   orders      Order[]
+  waiterCalls WaiterCall[]
 
   @@index([restaurantId, status])
   @@index([tableId, status])
@@ -161,4 +162,39 @@ model OrderStatusHistory {
 
   @@index([orderId, createdAt])
   @@map("order_status_history")
+}
+
+enum WaiterCallReason {
+  BILL
+  ASSISTANCE
+  PROBLEM
+}
+
+enum WaiterCallStatus {
+  PENDING
+  ATTENDED
+}
+
+model WaiterCall {
+  id           String @id @default(cuid())
+  restaurantId String @map("restaurant_id")
+  tableId      String @map("table_id")
+  sessionId    String @map("session_id")
+
+  reason String
+  status WaiterCallStatus @default(PENDING)
+
+  attendedAt     DateTime? @map("attended_at")
+  attendedByName String?   @map("attended_by_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  restaurant Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table      Table        @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  session    TableSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, status, createdAt])
+  @@index([sessionId, status])
+  @@map("waiter_calls")
 }

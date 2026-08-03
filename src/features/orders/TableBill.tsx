@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/utils/money";
 import { apiFetch, ApiError } from "@/lib/utils/api-client";
 import { cn } from "@/lib/utils/cn";
 import { SessionClosed } from "./SessionClosed";
+import { CallWaiter } from "./CallWaiter";
 
 type Status =
   "PENDING" | "CONFIRMED" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED";
@@ -74,7 +75,7 @@ export function TableBill({ tableCode }: { tableCode: string }) {
   const active = orders.filter((o) => o.status !== "CANCELLED");
 
   return (
-    <div className="min-h-dvh pb-32">
+    <div className="min-h-dvh pb-48">
       <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-surface-border bg-surface px-4 py-3">
         <Link
           href={`/m/${tableCode}`}
@@ -150,25 +151,27 @@ export function TableBill({ tableCode }: { tableCode: string }) {
         </div>
       )}
 
-      {active.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t border-surface-border bg-surface p-4">
-          {data && data.unpaidCents !== data.totalCents && (
-            <div className="mb-2 flex items-center justify-between text-sm text-ink-muted">
-              <span>Total de la mesa</span>
-              <span>{formatMoney(data.totalCents)}</span>
+      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg border-t border-surface-border bg-surface p-4">
+        {active.length > 0 && (
+          <>
+            {data && data.unpaidCents !== data.totalCents && (
+              <div className="mb-2 flex items-center justify-between text-sm text-ink-muted">
+                <span>Total de la mesa</span>
+                <span>{formatMoney(data.totalCents)}</span>
+              </div>
+            )}
+
+            <div className="mb-3 flex items-end justify-between">
+              <span className="font-medium">Por pagar</span>
+              <span className="text-3xl font-bold">
+                {formatMoney(data?.unpaidCents ?? 0)}
+              </span>
             </div>
-          )}
+          </>
+        )}
 
-          <div className="mb-3 flex items-end justify-between">
-            <span className="font-medium">Por pagar</span>
-            <span className="text-3xl font-bold">
-              {formatMoney(data?.unpaidCents ?? 0)}
-            </span>
-          </div>
-
-          <p className="mb-3 text-center text-xs text-ink-muted">
-            Pedile la cuenta al personal para pagar
-          </p>
+        <div className="space-y-2">
+          <CallWaiter />
 
           <Link href={`/m/${tableCode}`}>
             <Button variant="secondary" size="lg" className="w-full">
@@ -176,7 +179,7 @@ export function TableBill({ tableCode }: { tableCode: string }) {
             </Button>
           </Link>
         </div>
-      )}
+      </div>
     </div>
   );
 }

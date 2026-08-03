@@ -21,6 +21,7 @@ model Restaurant {
   orders           Order[]
   apiKeys          ApiKey[]
   webhookEndpoints WebhookEndpoint[]
+  waiterCalls      WaiterCall[]
 
   @@index([slug])
   @@map("restaurants")
@@ -35,8 +36,9 @@ model Table {
   seats     Int    @default(4)
   sortOrder Int    @default(0) @map("sort_order")
 
-  sessions TableSession[]
-  orders   Order[]
+  sessions    TableSession[]
+  orders      Order[]
+  waiterCalls WaiterCall[]
 
   isActive  Boolean   @default(true) @map("is_active")
   createdAt DateTime  @default(now()) @map("created_at")

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock, Loader2, Receipt, Users } from "lucide-react";
+import { BellRing, Clock, Loader2, Receipt, Users } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { apiFetch, ApiError } from "@/lib/utils/api-client";
 import { formatMoney } from "@/lib/utils/money";
@@ -34,6 +34,13 @@ interface OpenSession {
   orders: SessionOrder[];
 }
 
+interface WaiterCall {
+  id: string;
+  tableLabel: string;
+  reasonLabel: string;
+  createdAt: string;
+}
+
 const METHODS = [
   { value: "CASH", label: "Efectivo" },
   { value: "CARD_TERMINAL", label: "Tarjeta" },
@@ -59,6 +66,17 @@ export function RoomView() {
     refetchInterval: 10000,
   });
 
+  const calls = useQuery({
+    queryKey: ["waiter-calls"],
+    queryFn: () => apiFetch<{ calls: WaiterCall[] }>("/api/internal/llamados"),
+    refetchInterval: 8000,
+  });
+
+  const attend = async (id: string) => {
+    await apiFetch(`/api/internal/llamados/${id}/atender`, { method: "POST" });
+    void qc.invalidateQueries({ queryKey: ["waiter-calls"] });
+  };
+
   const close = async (skipPayment = false) => {
     if (!selected) return;
 
@@ -75,6 +93,7 @@ export function RoomView() {
 
       setSelected(null);
       void qc.invalidateQueries({ queryKey: ["room-sessions"] });
+      void qc.invalidateQueries({ queryKey: ["waiter-calls"] });
     } catch (e) {
       setNotice(
         e instanceof ApiError ? e.message : "No se pudo cerrar la mesa",
@@ -93,6 +112,7 @@ export function RoomView() {
   }
 
   const sessions = data?.sessions ?? [];
+  const pendingCalls = calls.data?.calls ?? [];
 
   return (
     <div>
@@ -104,6 +124,38 @@ export function RoomView() {
         </p>
       </header>
 
+      {pendingCalls.length > 0 && (
+        <div className="mb-4 space-y-2">
+          {pendingCalls.map((c) => (
+            <div
+              key={c.id}
+              className="flex items-center gap-3 rounded-xl bg-status-cancelled/10 px-4 py-3"
+            >
+              <BellRing
+                size={18}
+                className="shrink-0 animate-pulse text-status-cancelled"
+              />
+
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-status-cancelled">
+                  {c.tableLabel}
+                </p>
+                <p className="text-sm text-ink-muted">
+                  {c.reasonLabel} · hace {elapsedLabel(c.createdAt)}
+                </p>
+              </div>
+
+              <button
+                onClick={() => attend(c.id)}
+                className="shrink-0 rounded-lg bg-surface px-3 py-1.5 text-sm font-medium"
+              >
+                Atendido
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {sessions.length === 0 ? (
         <div className="rounded-2xl bg-surface p-8 text-center">
           <p className="font-medium">No hay mesas ocupadas</p>
@@ -113,41 +165,58 @@ export function RoomView() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {sessions.map((session) => (
-            <button
-              key={session.sessionId}
-              onClick={() => setSelected(session)}
-              className="rounded-2xl bg-surface p-4 text-left transition-shadow hover:shadow-md"
-            >
-              <header className="mb-3 flex items-start justify-between">
-                <div>
-                  <h2 className="font-semibold">{session.tableLabel}</h2>
-                  <p className="flex items-center gap-1 text-xs text-ink-muted">
-                    <Clock size={12} />
-                    {elapsedLabel(session.openedAt)}
-                  </p>
-                </div>
+          {sessions.map((session) => {
+            const hasCall = pendingCalls.some(
+              (c) => c.tableLabel === session.tableLabel,
+            );
 
-                {session.pendingKitchen > 0 && (
-                  <span className="rounded-full bg-status-preparing/15 px-2 py-0.5 text-xs font-medium text-status-preparing">
-                    {session.pendingKitchen} en cocina
-                  </span>
+            return (
+              <button
+                key={session.sessionId}
+                onClick={() => setSelected(session)}
+                className={cn(
+                  "rounded-2xl bg-surface p-4 text-left transition-shadow hover:shadow-md",
+                  hasCall && "ring-2 ring-status-cancelled",
                 )}
-              </header>
+              >
+                <header className="mb-3 flex items-start justify-between">
+                  <div>
+                    <h2 className="flex items-center gap-1.5 font-semibold">
+                      {session.tableLabel}
+                      {hasCall && (
+                        <BellRing
+                          size={14}
+                          className="animate-pulse text-status-cancelled"
+                        />
+                      )}
+                    </h2>
+                    <p className="flex items-center gap-1 text-xs text-ink-muted">
+                      <Clock size={12} />
+                      {elapsedLabel(session.openedAt)}
+                    </p>
+                  </div>
 
-              <div className="flex items-end justify-between">
-                <span className="flex items-center gap-1 text-sm text-ink-muted">
-                  <Receipt size={14} />
-                  {session.orderCount} pedido
-                  {session.orderCount === 1 ? "" : "s"}
-                </span>
+                  {session.pendingKitchen > 0 && (
+                    <span className="rounded-full bg-status-preparing/15 px-2 py-0.5 text-xs font-medium text-status-preparing">
+                      {session.pendingKitchen} en cocina
+                    </span>
+                  )}
+                </header>
 
-                <span className="text-xl font-bold">
-                  {formatMoney(session.unpaidCents)}
-                </span>
-              </div>
-            </button>
-          ))}
+                <div className="flex items-end justify-between">
+                  <span className="flex items-center gap-1 text-sm text-ink-muted">
+                    <Receipt size={14} />
+                    {session.orderCount} pedido
+                    {session.orderCount === 1 ? "" : "s"}
+                  </span>
+
+                  <span className="text-xl font-bold">
+                    {formatMoney(session.unpaidCents)}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
 

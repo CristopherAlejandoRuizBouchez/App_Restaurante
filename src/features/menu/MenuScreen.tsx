@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Receipt } from "lucide-react";
 import type { MenuCategoryDTO } from "@/modules/catalog";
+import { apiFetch } from "@/lib/utils/api-client";
 import { cn } from "@/lib/utils/cn";
 import { ProductCard } from "./ProductCard";
 import { CartBar } from "@/features/cart/CartBar";
@@ -22,6 +24,18 @@ export function MenuScreen({
   menu,
 }: MenuScreenProps) {
   const [active, setActive] = useState<string | null>(menu[0]?.id ?? null);
+
+  // Cuenta de pedidos activos, para el indicador.
+  const { data } = useQuery({
+    queryKey: ["session-orders"],
+    queryFn: () =>
+      apiFetch<{ orders: { status: string }[] }>("/api/public/orders"),
+    refetchInterval: 20000,
+  });
+
+  const activeOrders = (data?.orders ?? []).filter(
+    (o) => o.status !== "CANCELLED" && o.status !== "DELIVERED",
+  ).length;
 
   const scrollTo = (id: string) => {
     setActive(id);
@@ -52,10 +66,15 @@ export function MenuScreen({
 
           <Link
             href={`/m/${tableCode}/cuenta`}
-            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-surface-border px-3 py-2 text-sm font-medium"
+            className="relative flex shrink-0 items-center gap-1.5 rounded-xl border border-surface-border px-3 py-2 text-sm font-medium"
           >
             <Receipt size={16} />
-            Mi cuenta
+            Mis pedidos
+            {activeOrders > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-xs font-semibold text-white">
+                {activeOrders}
+              </span>
+            )}
           </Link>
         </div>
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Receipt } from "lucide-react";
+import { ArrowLeft, ChevronRight, Loader2, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatMoney } from "@/lib/utils/money";
 import { apiFetch } from "@/lib/utils/api-client";
@@ -39,6 +39,15 @@ const STATUS_LABEL: Record<Status, string> = {
   CANCELLED: "Cancelado",
 };
 
+const STATUS_COLOR: Record<Status, string> = {
+  PENDING: "text-status-pending",
+  CONFIRMED: "text-status-confirmed",
+  PREPARING: "text-status-preparing",
+  READY: "text-status-ready",
+  DELIVERED: "text-ink-muted",
+  CANCELLED: "text-status-cancelled",
+};
+
 export function TableBill({ tableCode }: { tableCode: string }) {
   const { data, isLoading } = useQuery({
     queryKey: ["session-orders"],
@@ -67,7 +76,7 @@ export function TableBill({ tableCode }: { tableCode: string }) {
         >
           <ArrowLeft size={20} />
         </Link>
-        <h1 className="text-lg font-semibold">Cuenta de la mesa</h1>
+        <h1 className="text-lg font-semibold">Mis pedidos</h1>
       </header>
 
       {active.length === 0 ? (
@@ -81,32 +90,42 @@ export function TableBill({ tableCode }: { tableCode: string }) {
       ) : (
         <div className="space-y-3 p-4">
           {active.map((order) => (
-            <article
+            <Link
               key={order.id}
-              className="overflow-hidden rounded-2xl bg-surface"
+              href={`/m/${tableCode}/orders/${order.id}`}
+              className="block overflow-hidden rounded-2xl bg-surface active:bg-surface-muted"
             >
               <header className="flex items-center justify-between border-b border-surface-border px-4 py-3">
                 <div>
                   <p className="font-semibold">{order.orderNumber}</p>
-                  <p className="text-xs text-ink-muted">
+                  <p
+                    className={cn(
+                      "text-xs font-medium",
+                      STATUS_COLOR[order.status],
+                    )}
+                  >
                     {STATUS_LABEL[order.status]}
                   </p>
                 </div>
 
-                <div className="text-right">
-                  <p className="font-semibold">
-                    {formatMoney(order.totalCents)}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-xs font-medium",
-                      order.paymentStatus === "PAID"
-                        ? "text-status-ready"
-                        : "text-ink-muted",
-                    )}
-                  >
-                    {order.paymentStatus === "PAID" ? "Pagado" : "Por pagar"}
-                  </p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className="font-semibold">
+                      {formatMoney(order.totalCents)}
+                    </p>
+                    <p
+                      className={cn(
+                        "text-xs font-medium",
+                        order.paymentStatus === "PAID"
+                          ? "text-status-ready"
+                          : "text-ink-muted",
+                      )}
+                    >
+                      {order.paymentStatus === "PAID" ? "Pagado" : "Por pagar"}
+                    </p>
+                  </div>
+
+                  <ChevronRight size={18} className="text-ink-muted" />
                 </div>
               </header>
 
@@ -119,7 +138,7 @@ export function TableBill({ tableCode }: { tableCode: string }) {
                   </li>
                 ))}
               </ul>
-            </article>
+            </Link>
           ))}
         </div>
       )}

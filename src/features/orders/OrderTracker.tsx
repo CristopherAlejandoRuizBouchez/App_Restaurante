@@ -5,8 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Clock, Loader2, UtensilsCrossed, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatMoney } from "@/lib/utils/money";
-import { apiFetch } from "@/lib/utils/api-client";
+import { apiFetch, ApiError } from "@/lib/utils/api-client";
 import { cn } from "@/lib/utils/cn";
+import { SessionClosed } from "./SessionClosed";
 
 type Status =
   "PENDING" | "CONFIRMED" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED";
@@ -53,10 +54,11 @@ export function OrderTracker({
   tableCode: string;
   orderId: string;
 }) {
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["order", orderId],
     queryFn: () => apiFetch<OrderResponse>(`/api/public/orders/${orderId}`),
     refetchInterval: 8000,
+    retry: false,
   });
 
   if (isLoading) {
@@ -65,6 +67,11 @@ export function OrderTracker({
         <Loader2 size={28} className="animate-spin text-ink-muted" />
       </div>
     );
+  }
+
+  // El mesero cerró la cuenta.
+  if (error instanceof ApiError && error.status === 401) {
+    return <SessionClosed tableCode={tableCode} />;
   }
 
   if (isError || !data) {
@@ -80,6 +87,7 @@ export function OrderTracker({
 
   const { order } = data;
   const cancelled = order.status === "CANCELLED";
+  const finished = order.status === "DELIVERED";
   const currentIndex = STEPS.findIndex((s) => s.status === order.status);
 
   return (
@@ -123,7 +131,6 @@ export function OrderTracker({
       {!cancelled && (
         <ol className="mx-4 mt-6 space-y-1">
           {STEPS.map((step, index) => {
-            const finished = order.status === "DELIVERED";
             const done = index < currentIndex || finished;
             const active = index === currentIndex && !finished;
 
@@ -189,7 +196,7 @@ export function OrderTracker({
       <div className="mt-6 space-y-2 px-4">
         <Link href={`/m/${tableCode}/cuenta`}>
           <Button variant="secondary" size="lg" className="w-full">
-            Ver cuenta de la mesa
+            Ver todos mis pedidos
           </Button>
         </Link>
 

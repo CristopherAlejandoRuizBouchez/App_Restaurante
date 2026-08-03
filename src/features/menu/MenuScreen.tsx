@@ -25,12 +25,13 @@ export function MenuScreen({
 }: MenuScreenProps) {
   const [active, setActive] = useState<string | null>(menu[0]?.id ?? null);
 
-  // Cuenta de pedidos activos, para el indicador.
+  // Contador de pedidos en curso, para el indicador del botón.
   const { data } = useQuery({
     queryKey: ["session-orders"],
     queryFn: () =>
       apiFetch<{ orders: { status: string }[] }>("/api/public/orders"),
     refetchInterval: 20000,
+    retry: false,
   });
 
   const activeOrders = (data?.orders ?? []).filter(

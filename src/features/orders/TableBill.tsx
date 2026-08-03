@@ -5,8 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChevronRight, Loader2, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { formatMoney } from "@/lib/utils/money";
-import { apiFetch } from "@/lib/utils/api-client";
+import { apiFetch, ApiError } from "@/lib/utils/api-client";
 import { cn } from "@/lib/utils/cn";
+import { SessionClosed } from "./SessionClosed";
 
 type Status =
   "PENDING" | "CONFIRMED" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED";
@@ -49,10 +50,11 @@ const STATUS_COLOR: Record<Status, string> = {
 };
 
 export function TableBill({ tableCode }: { tableCode: string }) {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["session-orders"],
     queryFn: () => apiFetch<SessionOrders>("/api/public/orders"),
-    refetchInterval: 15000,
+    refetchInterval: 10000,
+    retry: false,
   });
 
   if (isLoading) {
@@ -61,6 +63,11 @@ export function TableBill({ tableCode }: { tableCode: string }) {
         <Loader2 size={28} className="animate-spin text-ink-muted" />
       </div>
     );
+  }
+
+  // El mesero cerró la cuenta: la sesión ya no existe.
+  if (error instanceof ApiError && error.status === 401) {
+    return <SessionClosed tableCode={tableCode} />;
   }
 
   const orders = data?.orders ?? [];

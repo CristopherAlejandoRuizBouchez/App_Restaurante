@@ -8,42 +8,37 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const sessions = await prisma.tableSession.findMany({
+  const restaurants = await prisma.restaurant.findMany({
     include: {
-      table: { select: { label: true } },
-      orders: {
-        select: { orderNumber: true, totalCents: true, status: true },
-      },
+      memberships: { include: { user: { select: { email: true } } } },
+      categories: { select: { name: true } },
+      products: { select: { name: true } },
+      tables: { select: { code: true, label: true } },
     },
-    orderBy: { openedAt: "desc" },
-    take: 10,
   });
 
-  console.log("\n--- SESIONES ---");
-  for (const s of sessions) {
-    console.log(
-      `\n${s.table.label}  [${s.status}]  abierta ${s.openedAt.toISOString()}`,
+  for (const r of restaurants) {
+    console.log("\n" + "=".repeat(50));
+    console.log(`${r.name}  (slug: ${r.slug})`);
+    console.log(`id: ${r.id}`);
+    console.log("=".repeat(50));
+
+    console.log("\n  Usuarios:");
+    r.memberships.forEach((m) =>
+      console.log(`    ${m.user.email}  [${m.role}]`),
     );
-    console.log(`  sessionId: ${s.id}`);
-    s.orders.forEach((o) =>
-      console.log(
-        `    ${o.orderNumber}  $${(o.totalCents / 100).toFixed(2)}  ${o.status}`,
-      ),
-    );
+
+    console.log(`\n  Categorías (${r.categories.length}):`);
+    r.categories.forEach((c) => console.log(`    ${c.name}`));
+
+    console.log(`\n  Productos (${r.products.length}):`);
+    r.products.forEach((p) => console.log(`    ${p.name}`));
+
+    console.log(`\n  Mesas (${r.tables.length}):`);
+    r.tables
+      .slice(0, 3)
+      .forEach((t) => console.log(`    ${t.label} -> ${t.code}`));
   }
-
-  const tokens = await prisma.guestToken.findMany({
-    include: { session: { include: { table: { select: { label: true } } } } },
-    orderBy: { createdAt: "desc" },
-    take: 8,
-  });
-
-  console.log("\n\n--- TOKENS DE COMENSAL (más recientes) ---");
-  tokens.forEach((t) =>
-    console.log(
-      `  ${t.createdAt.toISOString()}  ->  ${t.session.table.label}  (sesión ${t.sessionId.slice(-6)})`,
-    ),
-  );
 
   console.log("");
 }

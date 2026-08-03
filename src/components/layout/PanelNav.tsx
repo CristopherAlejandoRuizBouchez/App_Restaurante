@@ -22,9 +22,11 @@ const LINKS = [
 export function PanelNav({
   actorName,
   role,
+  restaurantName,
 }: {
   actorName: string;
   role: string;
+  restaurantName: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -40,8 +42,8 @@ export function PanelNav({
       {/* Barra lateral en escritorio */}
       <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-surface-border bg-surface p-4 md:flex">
         <div className="mb-6 px-2">
-          <p className="font-semibold">SmartMenu</p>
-          <p className="text-xs text-ink-muted">
+          <p className="truncate text-base font-semibold">{restaurantName}</p>
+          <p className="truncate text-xs text-ink-muted">
             {actorName} · {role}
           </p>
         </div>
@@ -77,6 +79,14 @@ export function PanelNav({
           Salir
         </button>
       </aside>
+
+      {/* Encabezado en móvil */}
+      <header className="border-b border-surface-border bg-surface px-4 py-3 md:hidden">
+        <p className="truncate font-semibold">{restaurantName}</p>
+        <p className="truncate text-xs text-ink-muted">
+          {actorName} · {role}
+        </p>
+      </header>
 
       {/* Barra inferior en móvil */}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-surface-border bg-surface md:hidden">

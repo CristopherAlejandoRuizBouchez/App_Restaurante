@@ -6,6 +6,7 @@ import {
   ClipboardList,
   LayoutGrid,
   LogOut,
+  TrendingUp,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const LINKS = [
   { href: "/panel/sala", label: "Sala", icon: Users },
   { href: "/panel/menu", label: "Menú", icon: UtensilsCrossed },
   { href: "/panel/mesas", label: "Mesas", icon: LayoutGrid },
+  { href: "/panel/reportes", label: "Ventas", icon: TrendingUp },
 ];
 
 export function PanelNav({
